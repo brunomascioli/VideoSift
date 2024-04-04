@@ -1,28 +1,26 @@
 import os
 from bardapi import Bard
 from dotenv import load_dotenv
+from LLMs import LLMs
 
-class bardHandler():
-    def __init__(self):
-        # Carrega as variáveis de ambiente do arquivo .env
-        load_dotenv()
-        self.token = os.getenv("BARD_API_KEY")
+class bardHandler(LLMs):
+    def __init__(self, config, text):
+        super().__init__(config, text)
 
-        # Verifica se a chave da API foi encontrada
+        self.client = Bard(token=self.token)
+
         if not (self.token):
             raise Exception("Bard API Key não encontrada. Certifique-se de definir BARD_API_KEY em seu arquivo .env.")
         
-        # Inicializa o objeto Bard com a chave da API
-        self.bard = Bard(token = self.token)
+    def _sendMessage(self):
+        message = self.prompt + self.text
+        client = self.client
+        result = client.get_answer(f"{self.input_text} {self.prompt}")['content']
+
+        return result
        
     def defineAnalysisType(self, analysisType, outputLanguage):
         if analysisType == "summarization":
             self.input_text = 'Summarize the following text into 150 words, making it easy to read and comprehend. The summary should be concise, clear, and capture the main points of the text. Avoid using complex sentence structures or technical jargon. Response language: %s and in "%s".' % ('%', outputLanguage) + " Text: "
         elif analysisType == "classification":
             self.input_text = "Situation: You function as a text classifier, receiving a text and providing only its tags. Without explaining or summary the text, just the tags. Response language: %s" % outputLanguage + " Text: "
-
-    def get_bard_response(self, prompt):
-        # Obtém a resposta da API Bard usando a instância já criada
-        result = self.bard.get_answer(f"{self.input_text} {prompt}")['content']
-
-        return result
