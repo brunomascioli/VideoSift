@@ -1,31 +1,29 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File
 from pydantic import BaseModel
-from enum import Enum
-from transcribe_audio_to_text import TranscribeAudio
-import LLMs
+from config.ProgramConfig import Config
+from secrets import token_hex
+from typing import Optional
+from pipeline.pipeline import Pipeline
 
 router = APIRouter(prefix="/summarize-video")
-
-class WhisperSize(str, Enum):
-  small = "small"
-  medium = "medium"
-  large = "large"
-
-class LlmModel(str, Enum):
-  gemini = "gemini"
-  gpt3 = "gpt-3.5"
-
-class SummarizeVideoRequest(BaseModel):
-  video_url: str
-  whisper_size: WhisperSize
-  llm_model: str
-  api_token: str
   
 class SummarizeVideoResponse(BaseModel):
   summary: str
 
-@router.post("/", response_model=SummarizeVideoRequest, status_code=200)
-def get_video_summary(config: SummarizeVideoResponse):
-  tran
+async def uploadVideo(file: Optional[UploadFile] = File(None)):
+  if file:
+    file_ext = file.filename.split(".").pop()
+    file_name = token_hex(10)
+    file_path = f"{file_name}.{file_ext}"
+    with open(file_path, "wb") as f:
+      content = await file.read()
+      f.write(content)
 
-  return SummarizeVideoResponse(summary=summary)
+@router.post("/", response_model=SummarizeVideoResponse, status_code=200)
+async def get_video_summary(config: Config):
+  try:
+    pipeline = Pipeline(config)
+    res = pipeline.summarize()
+    return {"sucess":True, "summary":res}
+  except Exception as e:
+    print(e)

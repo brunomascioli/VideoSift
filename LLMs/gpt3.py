@@ -1,22 +1,27 @@
+from LLMs.LLMs import LLM
 from openai import OpenAI
-from LLMs import LLMs
 import logging
 
-class chatgptHandler(LLMs):
-    def __init__(self, config, text):
+class ChatgptHandler(LLM):
+    def __init__(self, config, text) -> None:
         super().__init__(config, text)
         self.client = OpenAI(api_key=self.token)
-
+        self.summary = None
+        self.sendMessage()
+        
     def _sendMessage(self):
         message = self.prompt + self.text
-        client = self.client
-        completion = client.chat.completions.create(
-            model=self.model,
-            messages=[
+        completion = self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages= [
+                {"role": "system", "content": self.prompt},
                 {"role": "user", "content": message}
             ]
         )
         self.summary = completion.choices[0].message.content
+
+    def getSummary(self):
+        return self.summary
 
     def sendMessage(self):
         max_retries = 3
