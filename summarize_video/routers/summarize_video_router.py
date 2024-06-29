@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form
 from pydantic import BaseModel
-from config.ProgramConfig import Config
+from config.ProgramConfig import *
 from secrets import token_hex
 from typing import Optional
 from pipeline.pipeline import Pipeline
@@ -10,20 +10,29 @@ router = APIRouter(prefix="/summarize-video")
 class SummarizeVideoResponse(BaseModel):
   summary: str
 
-async def uploadVideo(file: Optional[UploadFile] = File(None)):
-  if file:
-    file_ext = file.filename.split(".").pop()
-    file_name = token_hex(10)
-    file_path = f"{file_name}.{file_ext}"
-    with open(file_path, "wb") as f:
-      content = await file.read()
-      f.write(content)
+@router.post("/", status_code=200)
+async def get_video_summary(
+    file: Optional[UploadFile] = File(None),
+    video_url: Optional[str] = Form(None),
+    api_token: str = Form(...),
+    whisper_size: WhisperSize = Form(...),
+    llm_model: LlmModel = Form(...)
+):
+  if not file and not video_url:
+    raise HTTPException(status_code=400, detail="Either 'file' or 'video_url' must be provided.")
 
-@router.post("/", response_model=SummarizeVideoResponse, status_code=200)
-async def get_video_summary(config: Config):
   try:
+    config = Config(
+      file=file,
+      video_url=video_url,
+      api_token=api_token,
+      whisper_size=whisper_size,
+      llm_model=llm_model
+    )
+    if file: config.video_url = file.filename
     pipeline = Pipeline(config)
-    res = pipeline.summarize()
-    return {"sucess":True, "summary":res}
+    res = await pipeline.summarize()
+    return {"sucess":True, "summary":res }
   except Exception as e:
-    print(e)
+    raise HTTPException(status_code=500, detail=str(e))
+    

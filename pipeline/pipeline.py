@@ -9,9 +9,10 @@ class Pipeline():
         self.llm_model = config.llm_model
         self.model_size = config.whisper_size
         self.video_url = config.video_url
+        self.file = config.file
 
-    def summarize(self):       
-        transcription = TranscribeAudio(self.model_size, self.video_url).process()
+    async def summarize(self) -> str:       
+        transcription = await TranscribeAudio(self.model_size, self.video_url, self.file).process()
 
         if self.llm_model == LlmModel.gpt3:
             llm_response = ChatgptHandler(self.config, transcription).sendMessage()

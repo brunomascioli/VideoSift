@@ -49,17 +49,9 @@ class GeminiHandler(LLM):
         for chunk in response:
             self.summary += chunk.text 
 
-
     def sendMessage(self):
-        self._sendMessage()
-        max_retries = 3
-        for i in range(max_retries):
-            try:
-                self._sendMessage()
-                break
-            except Exception as e:
-                logging.error(f"An error occurred during sendMessage: {str(e)}")
-                logging.info(f"Retrying {i+1}/{max_retries} times ...")
-                continue
-        else:
-            raise Exception("An error occurred during sendMessage")
+        try:
+            self._sendMessage()
+        except Exception as e:
+            logging.error(f"An error occurred during sendMessage: {str(e)}")
+            
