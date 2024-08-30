@@ -1,5 +1,6 @@
-from LLMs.gpt3 import ChatgptHandler
+from LLMs.gpt3 import ChatGptHandler
 from LLMs.gemini import GeminiHandler
+from typing import AsyncGenerator
 from transcribe.transcribe_audio_to_text import TranscribeAudio
 from config.ProgramConfig import *
 
@@ -11,14 +12,23 @@ class Pipeline():
         self.video_url = config.video_url
         self.file = config.file
 
-    async def summarize(self) -> str:       
-        transcription = await TranscribeAudio(self.model_size, self.video_url, self.file).process()
-
+    async def summarize(self) -> AsyncGenerator:     
+        transcribe_audio_process = TranscribeAudio(self.model_size, self.video_url, self.file).process        
+        
+        transcription = []
+        async for transcribe_event in transcribe_audio_process(transcription):
+            yield transcribe_event
         if self.llm_model == LlmModel.gpt3:
-            llm_response = ChatgptHandler(self.config, transcription).sendMessage()
-            return llm_response.getSummary()
-        
-        if self.llm_model == LlmModel.gemini:
-            llm_response = GeminiHandler(self.config, transcription)
-            return llm_response.getSummary() 
-        
+            yield {"status": "Processing completed"}
+            gpt_handler = ChatGptHandler(self.config, transcription[0]).send_message()
+            gpt_handler.send_message()
+            llm_response = gpt_handler.get_summary()
+        elif self.llm_model == LlmModel.gemini:
+            yield {"status": "Processing with gemini"}
+            print(transcription[0])
+            gemini_handler = GeminiHandler(self.config, transcription[0])
+            gemini_handler.send_message()
+            llm_response = gemini_handler.get_summary()
+            print(llm_response)
+    
+        yield {"status": "completed", "summary": llm_response}      
