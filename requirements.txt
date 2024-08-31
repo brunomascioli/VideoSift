@@ -9,3 +9,6 @@ uvicorn==0.28.0
 google-generativeai==0.3.1
 asyncio
 sse-starlette
+python-dotenv
+torchaudio
+pyannote.audio

@@ -25,10 +25,13 @@ class Pipeline():
             llm_response = gpt_handler.get_summary()
         elif self.llm_model == LlmModel.gemini:
             yield {"status": "Processing with gemini"}
-            print(transcription[0])
+            with open("transcription.txt", "r") as f:
+                f.write(transcription[0])
             gemini_handler = GeminiHandler(self.config, transcription[0])
             gemini_handler.send_message()
             llm_response = gemini_handler.get_summary()
+            with open("summarization.txt", "w") as f:
+                f.write(llm_response)
             print(llm_response)
     
         yield {"status": "completed", "summary": llm_response}      

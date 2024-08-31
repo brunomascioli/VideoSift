@@ -6,6 +6,9 @@ import os
 import whisper
 from config.ProgramConfig import PathType
 from pytubefix import YouTube
+from pyannote.audio import Pipeline
+from dotenv import dotenv_values
+from transcribe.diarize import process_diarized_text
 
 class TranscribeAudio:
     def __init__(self, model_size: str, path: str, file: Optional[UploadFile] = None):
@@ -21,6 +24,7 @@ class TranscribeAudio:
         return "cuda" if torch.cuda.is_available() else "cpu"
 
     def _get_path_type(self) -> None:
+        print(self.path)
         if self.path.startswith("https://www.youtube.com/watch?v="):
             return PathType.YOUTUBE
         else:
@@ -37,11 +41,11 @@ class TranscribeAudio:
     def _download_youtube_video(self) -> str:
         try:
             yt = YouTube(self.path)
-            stream = yt.streams.get_audio_only()
+            stream = yt.streams.filter.get_audio_only()
             if not stream:
                 raise Exception("No audio stream found")
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
-                stream.download(output_path=os.path.dirname(tmp_file.name), filename=os.path.basename(tmp_file.name))
+                stream.download(output_path=os.path.dirname(tmp_file.name), filename=os.path.basename(tmp_file.name), )
                 return tmp_file.name
             
         except Exception as e:
@@ -58,9 +62,18 @@ class TranscribeAudio:
     
     def _perform_transcription(self) -> str:
         try:
+            env = dotenv_values()
             model = whisper.load_model(self.model_size, device=self.device)
-            result = model.transcribe(self.local_path)
-            return result["text"]
+            transcription = model.transcribe(self.local_path)
+            pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.0",
+                use_auth_token=env["HUGGINGFACE_TOKEN"]
+            )
+            
+            diarization_result = pipeline(self.local_path)
+            final_result = process_diarized_text(diarization_data=diarization_result,
+                                                  transcription_data=transcription)
+            return final_result
         except Exception as e:
             raise Exception(f"Error during transcription! {str(e)}")
 

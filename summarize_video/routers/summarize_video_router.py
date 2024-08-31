@@ -26,6 +26,7 @@ async def get_video_summary(
     llm_model=llm_model,
     text_processing_option=text_processing_option
   )
+
   if not (file or video_url):
     raise HTTPException(status_code=400, detail="Either 'file' or 'video_url' must be provided.")
 
@@ -46,8 +47,10 @@ async def get_video_summary(
 
     pipeline = Pipeline(config)
 
+    print("Starting summarization")
     async def event_generator() -> AsyncIterable[str]:
       async for update in pipeline.summarize():
+        print(update)
         if await request.is_disconnected():
           break
         yield json.dumps(update)
